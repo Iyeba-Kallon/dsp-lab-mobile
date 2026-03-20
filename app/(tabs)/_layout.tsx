@@ -1,11 +1,8 @@
 import React from 'react';
+import { Tabs } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { Link, Tabs } from 'expo-router';
-import { Platform, Pressable } from 'react-native';
-
-import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-import { useClientOnlyValue } from '@/components/useClientOnlyValue';
+import Colors from '@/constants/Colors';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -13,57 +10,59 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme].tint,
-        // Disable the static render of the header on web
-        // to prevent a hydration error in React Navigation v6.
-        headerShown: useClientOnlyValue(false, true),
+        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        headerShown: true,
+        tabBarStyle: {
+          backgroundColor: colorScheme === 'dark' ? '#0f172a' : '#ffffff',
+        },
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Tab One',
-          tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{
-                ios: 'chevron.left.forwardslash.chevron.right',
-                android: 'code',
-                web: 'code',
-              }}
-              tintColor={color}
-              size={28}
-            />
-          ),
-          headerRight: () => (
-            <Link href="/modal" asChild>
-              <Pressable style={{ marginRight: 15 }}>
-                {({ pressed }) => (
-                  <SymbolView
-                    name={{ ios: 'info.circle', android: 'info', web: 'info' }}
-                    size={25}
-                    tintColor={Colors[colorScheme].text}
-                    style={{ opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
-          ),
+          title: 'Generate',
+          tabBarIcon: ({ color }) => <SymbolView name="waveform.path" tintColor={color} size={24} />,
         }}
       />
       <Tabs.Screen
-        name="two"
+        name="filter"
         options={{
-          title: 'Tab Two',
-          tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{
-                ios: 'chevron.left.forwardslash.chevron.right',
-                android: 'code',
-                web: 'code',
-              }}
-              tintColor={color}
-              size={28}
-            />
-          ),
+          title: 'Filter',
+          tabBarIcon: ({ color }) => <SymbolView name="f.cursive" tintColor={color} size={24} />,
+        }}
+      />
+      <Tabs.Screen
+        name="analyze"
+        options={{
+          title: 'Analyze',
+          tabBarIcon: ({ color }) => <SymbolView name="chart.bar.xaxis" tintColor={color} size={24} />,
+        }}
+      />
+      <Tabs.Screen
+        name="mixer"
+        options={{
+          title: 'Mixer',
+          tabBarIcon: ({ color }) => <SymbolView name="slider.horizontal.3" tintColor={color} size={24} />,
+        }}
+      />
+      < Tabs.Screen
+        name="aliasing"
+        options={{
+          title: 'Aliasing',
+          tabBarIcon: ({ color }) => <SymbolView name="waveform.path.badge.minus" tintColor={color} size={24} />,
+        }}
+      />
+      <Tabs.Screen
+        name="convolution"
+        options={{
+          title: 'Convolution',
+          tabBarIcon: ({ color }) => <SymbolView name="asterisk.circle" tintColor={color} size={24} />,
+        }}
+      />
+      <Tabs.Screen
+        name="library"
+        options={{
+          title: 'Library',
+          tabBarIcon: ({ color }) => <SymbolView name="folder" tintColor={color} size={24} />,
         }}
       />
     </Tabs>
