@@ -31,11 +31,15 @@ export const SpectrumPlot: React.FC<SpectrumPlotProps> = ({ magnitude, sampleRat
         padding={5}
       >
         {({ points }) => (
-          <Line
-            points={points.mag}
-            color="#fbbf24"
-            strokeWidth={2}
-          />
+          <>
+            {points.mag && (
+              <Line
+                points={points.mag}
+                color="#fbbf24"
+                strokeWidth={2}
+              />
+            )}
+          </>
         )}
       </CartesianChart>
     </View>

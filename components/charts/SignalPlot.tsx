@@ -40,12 +40,16 @@ export const SignalPlot: React.FC<SignalPlotProps> = ({
         domain={{ y: [-1.1, 1.1] }} // Signals are normalized to [-1, 1]
       >
         {({ points }) => (
-          <Line
-            points={points.y}
-            color={color}
-            strokeWidth={2}
-            animate={{ type: "timing", duration: 300 }}
-          />
+          <>
+            {points.y && (
+              <Line
+                points={points.y}
+                color={color}
+                strokeWidth={2}
+                animate={{ type: "timing", duration: 300 }}
+              />
+            )}
+          </>
         )}
       </CartesianChart>
     </View>
