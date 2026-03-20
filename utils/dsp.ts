@@ -155,29 +155,53 @@ export function computeMean(signal: Float32Array): number {
   }
   return sum / signal.length;
 }
-
 /**
- * Combines multiple signals with per-signal gain.
+ * Combines multiple signals with independent gain controls.
+ * Clamps output to [-1, 1].
  */
 export function mixSignals(
-  signals: { data: Float32Array; gain: number }[]
+  signals: Float32Array[],
+  gains: number[]
 ): Float32Array {
   if (signals.length === 0) return new Float32Array(0);
   
-  const maxLength = Math.max(...signals.map(s => s.data.length));
+  const maxLength = Math.max(...signals.map(s => s.length));
   const output = new Float32Array(maxLength);
 
   for (let i = 0; i < maxLength; i++) {
     let sum = 0;
-    for (const signal of signals) {
-      if (i < signal.data.length) {
-        sum += signal.data[i] * signal.gain;
+    for (let s = 0; s < signals.length; s++) {
+      if (i < signals[s].length) {
+        sum += signals[s][i] * gains[s];
       }
     }
-    output[i] = sum;
+    // Clamp to -1.0 to 1.0 range
+    output[i] = Math.max(-1, Math.min(1, sum));
   }
 
   return output;
+}
+
+/**
+ * Returns true if any sample in the signal hits 1.0 or -1.0.
+ */
+export function isClipping(signal: Float32Array): boolean {
+  for (let i = 0; i < signal.length; i++) {
+    if (signal[i] >= 1.0 || signal[i] <= -1.0) return true;
+  }
+  return false;
+}
+
+/**
+ * Returns ratio of clipped samples (0.0 - 1.0).
+ */
+export function detectClipRatio(signal: Float32Array): number {
+  if (signal.length === 0) return 0;
+  let clipCount = 0;
+  for (let i = 0; i < signal.length; i++) {
+    if (signal[i] >= 1.0 || signal[i] <= -1.0) clipCount++;
+  }
+  return clipCount / signal.length;
 }
 
 /**
