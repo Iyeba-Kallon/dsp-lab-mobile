@@ -3,7 +3,7 @@ import { View, Text, ScrollView } from 'react-native';
 import { useSignal } from '@/hooks/useSignal';
 import { useFilter } from '@/hooks/useFilter';
 import { SignalType } from '@/utils/dsp';
-import { SignalPlot } from '@/components/charts/SignalPlot';
+import SignalPlot from '@/components/charts/SignalPlot';
 
 export default function FilterScreen() {
   const { signal: inputSignal } = useSignal({

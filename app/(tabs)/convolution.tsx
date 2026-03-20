@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { convolve } from '@/utils/dsp';
-import { SignalPlot } from '@/components/charts/SignalPlot';
+import SignalPlot from '@/components/charts/SignalPlot';
 
 export default function ConvolutionScreen() {
   // Simple signal: Pulse
@@ -33,13 +33,13 @@ export default function ConvolutionScreen() {
       </View>
 
       <Text className="text-teal-400 font-mono mb-2 uppercase text-xs font-bold">Input x(n)</Text>
-      <SignalPlot data={input} color="#2dd4bf" height={150} />
+      <SignalPlot data={input} color="#2dd4bf" />
 
       <Text className="text-amber-400 font-mono mb-2 mt-4 uppercase text-xs font-bold">Kernel h(n)</Text>
-      <SignalPlot data={kernel} color="#fbbf24" height={150} />
+      <SignalPlot data={kernel} color="#fbbf24" />
 
       <Text className="text-white font-mono mb-2 mt-4 uppercase text-xs font-bold">Output y(n)</Text>
-      <SignalPlot data={output} color="#ffffff" height={200} />
+      <SignalPlot data={output} color="#ffffff" />
 
       <View className="mt-6 p-4 bg-slate-900 rounded-xl">
         <Text className="text-white font-bold mb-2">How it works</Text>

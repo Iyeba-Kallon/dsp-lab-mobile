@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { useSignal } from '@/hooks/useSignal';
 import { SignalType, mixSignals } from '@/utils/dsp';
-import { SignalPlot } from '@/components/charts/SignalPlot';
+import SignalPlot from '@/components/charts/SignalPlot';
 
 export default function MixerScreen() {
   const signal1 = useSignal({
