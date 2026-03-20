@@ -1,12 +1,22 @@
 import { useMemo } from 'react';
-import { computeFFT } from '../utils/dsp';
+import { computeFFT, computeRMS, computePeak, computeMean } from '@/utils/dsp';
 
-export function useFFT(signal: Float32Array) {
-  const magnitude = useMemo(() => {
-    return computeFFT(signal);
-  }, [signal]);
+/**
+ * Hook to compute spectral analysis and signal statistics.
+ */
+export function useFFT(signal: Float32Array, sampleRate: number) {
+  return useMemo(() => {
+    const { frequencies, magnitudes } = computeFFT(signal, sampleRate);
+    const rms = computeRMS(signal);
+    const peak = computePeak(signal);
+    const mean = computeMean(signal);
 
-  return {
-    magnitude,
-  };
+    return {
+      frequencies,
+      magnitudes,
+      rms,
+      peak,
+      mean,
+    };
+  }, [signal, sampleRate]);
 }
