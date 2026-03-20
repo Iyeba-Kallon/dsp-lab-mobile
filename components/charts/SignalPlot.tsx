@@ -1,57 +1,54 @@
-import React, { useMemo } from 'react';
-import { View, Dimensions } from 'react-native';
-import { CartesianChart, Line } from 'victory-native';
-import { useFont } from '@shopify/react-native-skia';
-
-// Victory Native XL (v41+) uses Skia for rendering.
+import React from 'react';
+import { View, Dimensions, StyleSheet } from 'react-native';
+import { LineChart } from 'react-native-chart-kit';
 
 interface SignalPlotProps {
-  data: Float32Array;
+  data: Float32Array | number[];
   color?: string;
-  height?: number;
+  label?: string;
 }
 
-export const SignalPlot: React.FC<SignalPlotProps> = ({ 
-  data, 
-  color = "#2dd4bf", 
-  height = 250 
-}) => {
-  // Convert Float32Array to format expected by Victory Native
-  // We usually downsample for large signals to maintain performance
-  const chartData = useMemo(() => {
-    const skip = Math.max(1, Math.floor(data.length / 500)); // Show ~500 points max
-    const result = [];
-    for (let i = 0; i < data.length; i += skip) {
-      result.push({ x: i, y: data[i] });
-    }
-    return result;
-  }, [data]);
+const screenWidth = Dimensions.get('window').width;
 
-  // If no font is provided, Victory uses a default or none.
-  // We can load a font here if needed, but for now we'll use defaults.
+export default function SignalPlot({ data, color = '#14b8a6', label = 'Signal' }: SignalPlotProps) {
+  // Downsample to 100 points max so the chart stays fast
+  const maxPoints = 100;
+  const step = Math.max(1, Math.floor(data.length / maxPoints));
+  
+  // Convert Float32Array to number[] if needed
+  const samples = Array.from(data).filter((_, i) => i % step === 0).slice(0, maxPoints);
 
   return (
-    <View style={{ height, width: '100%' }} className="bg-slate-900 rounded-lg overflow-hidden my-2">
-      <CartesianChart
-        data={chartData}
-        xKey="x"
-        yKeys={["y"]}
-        padding={5}
-        domain={{ y: [-1.1, 1.1] }} // Signals are normalized to [-1, 1]
-      >
-        {({ points }) => (
-          <>
-            {points.y && (
-              <Line
-                points={points.y}
-                color={color}
-                strokeWidth={2}
-                animate={{ type: "timing", duration: 300 }}
-              />
-            )}
-          </>
-        )}
-      </CartesianChart>
+    <View style={styles.container}>
+      <LineChart
+        data={{
+          labels: [],
+          datasets: [{ data: samples.length > 0 ? samples : [0], color: () => color }],
+        }}
+        width={screenWidth - 32}
+        height={200}
+        withDots={false}
+        withInnerLines={false}
+        withOuterLines={true}
+        withHorizontalLabels={true}
+        withVerticalLabels={false}
+        chartConfig={{
+          backgroundColor: '#0f172a',
+          backgroundGradientFrom: '#0f172a',
+          backgroundGradientTo: '#0f172a',
+          decimalPlaces: 2,
+          color: () => color,
+          labelColor: () => '#64748b',
+          propsForBackgroundLines: { stroke: '#1e293b' },
+        }}
+        bezier={false} // Disabled bezier for more accurate DSP signal representation
+        style={styles.chart}
+      />
     </View>
   );
-};
+}
+
+const styles = StyleSheet.create({
+  container: { marginVertical: 8 },
+  chart: { borderRadius: 12 },
+});
