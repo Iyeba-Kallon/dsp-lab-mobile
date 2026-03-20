@@ -1,0 +1,9 @@
+- All signal data is Float32Array of samples
+- Keep DSP math in /utils/dsp.ts (pure functions, no side effects)
+- Keep chart components in /components/charts/
+- react-native-gifted-charts for all signal plots (no Skia dependency, stable on Windows/Web)
+- Use custom hooks (useSignal, useFilter, useFFT) to separate logic from UI
+- Never do heavy computation on the JS thread — use useMemo and batch updates
+- All screens must work offline
+- TypeScript strict mode on
+- Write clear comments on any DSP math
