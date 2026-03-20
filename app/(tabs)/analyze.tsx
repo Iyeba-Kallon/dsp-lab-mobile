@@ -3,7 +3,7 @@ import { View, Text, ScrollView } from 'react-native';
 import { useSignal } from '@/hooks/useSignal';
 import { useFFT } from '@/hooks/useFFT';
 import { SignalType } from '@/utils/dsp';
-import { SignalPlot } from '@/components/charts/SignalPlot';
+import SignalPlot from '@/components/charts/SignalPlot';
 import { SpectrumPlot } from '@/components/charts/SpectrumPlot';
 
 export default function AnalyzeScreen() {

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, Switch } from 'react-native';
 import { useSignal } from '@/hooks/useSignal';
 import { SignalType } from '@/utils/dsp';
-import { SignalPlot } from '@/components/charts/SignalPlot';
+import SignalPlot from '@/components/charts/SignalPlot';
 // Actually, I'll use a simple View-based slider or just text inputs for now if I don't have a slider library.
 // Wait, I can use react-native-slider or just custom view.
 // I'll implement a simple slider component or use basic buttons for frequency selection.

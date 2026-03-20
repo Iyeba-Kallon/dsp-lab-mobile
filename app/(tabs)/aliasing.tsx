@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { generateSignal, SignalType } from '@/utils/dsp';
-import { SignalPlot } from '@/components/charts/SignalPlot';
+import SignalPlot from '@/components/charts/SignalPlot';
 
 export default function AliasingScreen() {
   const [freq, setFreq] = useState(1000);

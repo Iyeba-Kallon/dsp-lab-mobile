@@ -2,46 +2,41 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
 
-interface SignalPlotProps {
-  data: Float32Array | number[];
-  color?: string;
-  label?: string;
+interface SpectrumPlotProps {
+  magnitude: Float32Array;
+  sampleRate: number;
 }
 
 const screenWidth = Dimensions.get('window').width;
 
-export default function SignalPlot({
-  data,
-  color = '#14b8a6',
-  label = 'Signal',
-}: SignalPlotProps) {
-  // Downsample to 80 points max for performance
+export const SpectrumPlot: React.FC<SpectrumPlotProps> = ({ magnitude, sampleRate }) => {
+  // Downsample to 80 points max
   const chartData = useMemo(() => {
     const maxPoints = 80;
-    const step = Math.max(1, Math.floor(data.length / maxPoints));
-    const rawData = Array.from(data);
+    const step = Math.max(1, Math.floor(magnitude.length / maxPoints));
+    const rawData = Array.from(magnitude);
     return rawData
       .filter((_, i) => i % step === 0)
       .slice(0, maxPoints)
       .map((value) => ({ value }));
-  }, [data]);
+  }, [magnitude]);
 
   if (!chartData.length) {
     return (
       <View style={styles.empty}>
-        <Text style={styles.emptyText}>No signal yet</Text>
+        <Text style={styles.emptyText}>No spectrum data</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+      <Text style={styles.label}>Frequency Spectrum</Text>
       <LineChart
         data={chartData}
         width={screenWidth - 48}
         height={180}
-        color={color}
+        color="#fbbf24"
         thickness={2}
         hideDataPoints
         curved
@@ -56,7 +51,7 @@ export default function SignalPlot({
       />
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
