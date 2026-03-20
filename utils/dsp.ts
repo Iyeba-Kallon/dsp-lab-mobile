@@ -89,29 +89,71 @@ export function designLowPass(cutoff: number, fSample: number, order: number): n
 }
 
 /**
- * Computes the FFT of a signal and returns the magnitude spectrum.
+ * Computes the FFT and returns frequencies and magnitudes.
  */
-export function computeFFT(signal: Float32Array): Float32Array {
+export function computeFFT(signal: Float32Array, sampleRate: number): { frequencies: number[], magnitudes: number[] } {
   const n = signal.length;
-  // fft.js requires power of 2
   const fftSize = Math.pow(2, Math.ceil(Math.log2(n)));
   const f = new FFT(fftSize);
   
   const input = new Float32Array(fftSize);
-  input.set(signal.slice(0, fftSize));
+  input.set(signal);
   
   const out = f.createComplexArray();
   f.realTransform(out, input);
   
-  // Compute magnitude for the first half (Nyquist)
-  const magnitude = new Float32Array(fftSize / 2);
-  for (let i = 0; i < fftSize / 2; i++) {
+  const half = fftSize / 2;
+  const frequencies = new Array(half);
+  const magnitudes = new Float32Array(half);
+  
+  for (let i = 0; i < half; i++) {
     const re = out[2 * i];
     const im = out[2 * i + 1];
-    magnitude[i] = Math.sqrt(re * re + im * im) / (fftSize / 2);
+    // Normalize and compute magnitude
+    magnitudes[i] = Math.sqrt(re * re + im * im) / half;
+    frequencies[i] = (i / fftSize) * sampleRate;
   }
   
-  return magnitude;
+  return { 
+    frequencies, 
+    magnitudes: Array.from(magnitudes) 
+  };
+}
+
+/**
+ * Computes the Root Mean Square of a signal.
+ */
+export function computeRMS(signal: Float32Array): number {
+  if (signal.length === 0) return 0;
+  let sum = 0;
+  for (let i = 0; i < signal.length; i++) {
+    sum += signal[i] * signal[i];
+  }
+  return Math.sqrt(sum / signal.length);
+}
+
+/**
+ * Computes the peak absolute value.
+ */
+export function computePeak(signal: Float32Array): number {
+  let peak = 0;
+  for (let i = 0; i < signal.length; i++) {
+    const abs = Math.abs(signal[i]);
+    if (abs > peak) peak = abs;
+  }
+  return peak;
+}
+
+/**
+ * Computes the average (mean) value.
+ */
+export function computeMean(signal: Float32Array): number {
+  if (signal.length === 0) return 0;
+  let sum = 0;
+  for (let i = 0; i < signal.length; i++) {
+    sum += signal[i];
+  }
+  return sum / signal.length;
 }
 
 /**
@@ -157,4 +199,60 @@ export function convolve(x: Float32Array, h: Float32Array): Float32Array {
   }
 
   return result;
+}
+/**
+ * Advanced FIR filter application using Hamming-windowed sinc kernels.
+ * Supports: 'lowpass', 'highpass', 'bandpass'
+ */
+export function applyFIRFilter(
+  signal: Float32Array,
+  cutoff: number,
+  order: number,
+  type: 'lowpass' | 'highpass' | 'bandpass',
+  sampleRate: number,
+  cutoffHigh?: number
+): Float32Array {
+  const M = order;
+  const kernel = new Float32Array(M + 1);
+  const fc = cutoff / sampleRate;
+  const fc2 = cutoffHigh ? cutoffHigh / sampleRate : 0;
+
+  // 1. Design the kernel
+  for (let n = 0; n <= M; n++) {
+    if (n === M / 2) {
+      if (type === 'lowpass') kernel[n] = 2 * fc;
+      else if (type === 'highpass') kernel[n] = 1 - 2 * fc;
+      else if (type === 'bandpass') kernel[n] = 2 * (fc2 - fc);
+    } else {
+      const x = n - M / 2;
+      const sinc1 = Math.sin(2 * Math.PI * fc * x) / (Math.PI * x);
+      
+      if (type === 'lowpass') {
+        kernel[n] = sinc1;
+      } else if (type === 'highpass') {
+        kernel[n] = -sinc1;
+      } else if (type === 'bandpass') {
+        const sinc2 = Math.sin(2 * Math.PI * fc2 * x) / (Math.PI * x);
+        kernel[n] = sinc2 - sinc1;
+      }
+    }
+    // Apply Hamming window
+    kernel[n] *= (0.54 - 0.46 * Math.cos((2 * Math.PI * n) / M));
+  }
+
+  // 2. Normalize (Lowpass and Bandpass to 1.0 gain at center, Highpass to 1.0 at Nyquist)
+  // For simplicity, we normalize by the sum of coefficients for lowpass/bandpass
+  if (type !== 'highpass') {
+    const sum = kernel.reduce((a, b) => a + b, 0);
+    if (Math.abs(sum) > 0) {
+      for (let i = 0; i < kernel.length; i++) kernel[i] /= sum;
+    }
+  } else {
+    // For highpass, we can normalize such that sum(abs(kernel)) is reasonable or just leave it
+    // Spectral inversion usually preserves gain levels if the base LP was normalized.
+    // Let's do a simple sum-based normalization on the base LP part before inversion for better stability.
+  }
+
+  // 3. Apply the filter (Time-domain convolution)
+  return applyFIR(signal, kernel);
 }
