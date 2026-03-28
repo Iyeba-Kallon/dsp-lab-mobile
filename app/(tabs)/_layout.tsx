@@ -10,11 +10,20 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: true,
+        tabBarActiveTintColor: Colors.neon.cyan,
+        tabBarInactiveTintColor: '#64748b',
+        headerShown: false,
         tabBarStyle: {
-          backgroundColor: colorScheme === 'dark' ? '#0f172a' : '#ffffff',
+          backgroundColor: '#020617',
+          borderTopColor: 'rgba(255,255,255,0.05)',
+          paddingTop: 8,
+          height: 88,
         },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontFamily: 'SpaceMono',
+          paddingBottom: 8,
+        }
       }}>
       <Tabs.Screen
         name="index"
