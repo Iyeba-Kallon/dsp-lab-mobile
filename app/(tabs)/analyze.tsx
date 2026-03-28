@@ -1,95 +1,97 @@
 import React, { useMemo } from 'react';
-import { View, Text, ScrollView, Dimensions, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StatusBar, Dimensions } from 'react-native';
 import { generateSignal, SignalType } from '@/utils/dsp';
 import { useFFT } from '@/hooks/useFFT';
-import SignalPlot from '@/components/charts/SignalPlot';
-import { BarChart } from 'react-native-gifted-charts';
+import GlowSignalPlot from '@/components/charts/GlowSignalPlot';
+import SpectrumPlot from '@/components/charts/SpectrumPlot';
+import WaterfallSpectrogram from '@/components/charts/WaterfallSpectrogram';
+import GlassCard from '@/components/ui/GlassCard';
+import Colors from '@/constants/Colors';
 
-const screenWidth = Dimensions.get('window').width;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function AnalyzeScreen() {
-  // Hardcoded test signal for Day 5
   const sampleRate = 8000;
-  const numSamples = 4096;
+  const numSamples = 1024;
+  
+  // Create a slightly more complex signal for analysis (Sine + Sine)
   const signal = useMemo(() => {
-    return generateSignal(SignalType.SINE, 440, 1.0, sampleRate, numSamples);
+    const s1 = generateSignal(SignalType.SINE, 440, 0.6, sampleRate, numSamples);
+    const s2 = generateSignal(SignalType.SINE, 880, 0.3, sampleRate, numSamples);
+    const combined = new Float32Array(numSamples);
+    for (let i = 0; i < numSamples; i++) {
+        combined[i] = s1[i] + s2[i];
+    }
+    return combined;
   }, []);
 
   const { magnitudes, frequencies, rms, peak, mean } = useFFT(signal, sampleRate);
 
-  // Downsample FFT for BarChart (max 60 bars)
-  const barData = useMemo(() => {
-    const maxBars = 60;
-    const step = Math.max(1, Math.floor(magnitudes.length / maxBars));
-    return magnitudes
-      .filter((_, i) => i % step === 0)
-      .slice(0, maxBars)
-      .map((mag, i) => ({
-        value: mag,
-        label: i % 10 === 0 ? `${Math.round(frequencies[i * step])}` : '',
-        frontColor: '#f59e0b',
-      }));
-  }, [magnitudes, frequencies]);
-
-  const StatCard = ({ label, value }: { label: string; value: number }) => (
-    <View className="flex-1 bg-slate-900 border border-slate-800 p-3 rounded-xl mx-1">
-      <Text className="text-slate-500 text-[10px] uppercase mb-1">{label}</Text>
-      <Text className="text-teal-400 font-mono text-sm font-bold">{value.toFixed(3)}</Text>
+  const StatCard = ({ label, value, color }: { label: string; value: number; color: string }) => (
+    <View className="flex-1 bg-white/5 border border-white/10 p-4 rounded-2xl mx-1 backdrop-blur-md">
+      <Text className="text-slate-500 text-[10px] font-mono uppercase tracking-widest mb-1">{label}</Text>
+      <Text style={{ color }} className="font-mono text-lg font-bold">{value.toFixed(3)}</Text>
     </View>
   );
 
   return (
-    <ScrollView className="flex-1 bg-slate-950">
-      <View className="p-4">
-        <View className="mb-6">
-          <Text className="text-white text-2xl font-bold mb-2">Signal Analysis</Text>
-          <Text className="text-slate-400">View time and frequency characteristics.</Text>
+    <View className="flex-1 bg-slate-950">
+      <StatusBar barStyle="light-content" />
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
+        
+        {/* Header */}
+        <View className="mb-8 pt-6">
+          <Text className="text-white text-3xl font-bold tracking-tight">Signal <Text style={{ color: Colors.neon.yellow }}>Analysis</Text></Text>
+          <Text className="text-slate-500 text-xs font-mono mt-1 tracking-widest uppercase">Deep Spectral Insights</Text>
         </View>
 
-        {/* Section 1: Time Domain */}
+        {/* Time Domain Section */}
         <View className="mb-8">
-          <Text className="text-slate-500 text-[11px] uppercase tracking-widest mb-3">Time Domain</Text>
-          <SignalPlot data={signal} color="#14b8a6" label="Raw Waveform" />
-        </View>
-
-        {/* Section 2: Frequency Spectrum */}
-        <View className="mb-8">
-          <Text className="text-slate-500 text-[11px] uppercase tracking-widest mb-3">Frequency Spectrum (FFT)</Text>
-          <View className="bg-slate-900 p-4 rounded-xl">
-            <BarChart
-              data={barData}
-              width={screenWidth - 64}
-              height={180}
-              barWidth={Math.max(2, (screenWidth - 100) / 60)}
-              noOfSections={4}
-              yAxisThickness={0}
-              xAxisThickness={0}
-              yAxisTextStyle={styles.axisText}
-              xAxisLabelTextStyle={styles.axisText}
-              isAnimated
-              animationDuration={500}
-              maxValue={1}
+            <GlowSignalPlot 
+                data={signal} 
+                color={Colors.neon.cyan} 
+                label="Raw Waveform (Time Domain)" 
+                height={200}
             />
+        </View>
+
+        {/* Frequency Domain Section */}
+        <View className="mb-8">
+            <SpectrumPlot 
+                magnitudes={magnitudes} 
+                frequencies={frequencies} 
+                color={Colors.neon.yellow}
+                label="Frequency Distribution (FFT)"
+                height={220}
+            />
+        </View>
+
+        {/* Waterfall Section */}
+        <View className="mb-8">
+            <WaterfallSpectrogram 
+                magnitudes={magnitudes}
+                label="Waterfall Spectrogram (History)"
+                height={240}
+            />
+        </View>
+
+        {/* Signal Stats Section */}
+        <View className="mb-8">
+          <Text className="text-slate-500 text-[10px] uppercase font-mono tracking-widest mb-4 ml-2">Real-time Metrics</Text>
+          <View className="flex-row -mx-1">
+            <StatCard label="RMS" value={rms} color={Colors.neon.green} />
+            <StatCard label="Peak" value={peak} color={Colors.neon.violet} />
+            <StatCard label="Mean" value={mean} color={Colors.neon.blue} />
           </View>
         </View>
 
-        {/* Section 3: Signal Stats */}
-        <View className="mb-8">
-          <Text className="text-slate-500 text-[11px] uppercase tracking-widest mb-3">Signal Statistics</Text>
-          <View className="flex-row -mx-1">
-            <StatCard label="RMS" value={rms} />
-            <StatCard label="Peak" value={peak} />
-            <StatCard label="Mean" value={mean} />
-          </View>
-        </View>
-      </View>
-    </ScrollView>
+        <GlassCard className="mt-4">
+             <Text className="text-slate-400 text-xs font-mono leading-relaxed">
+                Analysis performed at <Text className="text-white">{sampleRate} Hz</Text> using a <Text className="text-white">{numSamples}</Text> point FFT window. Peaks indicate dominant harmonic frequencies.
+             </Text>
+        </GlassCard>
+
+      </ScrollView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  axisText: {
-    color: '#64748b',
-    fontSize: 8,
-  },
-});

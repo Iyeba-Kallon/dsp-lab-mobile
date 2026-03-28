@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Switch } from 'react-native';
+import React from 'react';
+import { View, Text, ScrollView, Pressable, StatusBar } from 'react-native';
 import { useSignal } from '@/hooks/useSignal';
 import { SignalType } from '@/utils/dsp';
-import SignalPlot from '@/components/charts/SignalPlot';
-// Actually, I'll use a simple View-based slider or just text inputs for now if I don't have a slider library.
-// Wait, I can use react-native-slider or just custom view.
-// I'll implement a simple slider component or use basic buttons for frequency selection.
+import GlowSignalPlot from '@/components/charts/GlowSignalPlot';
+import NeonSlider from '@/components/inputs/NeonSlider';
+import GlassCard from '@/components/ui/GlassCard';
+import Colors from '@/constants/Colors';
 
 export default function GenerateScreen() {
   const { signal, config, updateConfig } = useSignal({
@@ -16,78 +16,105 @@ export default function GenerateScreen() {
     numSamples: 1024,
   });
 
+  const signalTypes = [
+    { id: SignalType.SINE, label: 'Sine', color: Colors.neon.cyan },
+    { id: SignalType.SQUARE, label: 'Square', color: Colors.neon.violet },
+    { id: SignalType.SAWTOOTH, label: 'Saw', color: Colors.neon.magenta },
+  ];
+
   return (
-    <ScrollView className="flex-1 bg-slate-950 p-4">
-      <View className="mb-4">
-        <Text className="text-white text-2xl font-bold mb-2">Signal Generator</Text>
-        <Text className="text-slate-400 mb-4">Create basic periodic waveforms.</Text>
-      </View>
-
-      <SignalPlot data={signal} color="#2dd4bf" />
-
-      <View className="bg-slate-900 p-4 rounded-xl mt-4">
-        <View className="flex-row justify-between items-center mb-6">
-          <Text className="text-white font-mono">Type: {config.type.toUpperCase()}</Text>
-          <View className="flex-row gap-2">
-            {[SignalType.SINE, SignalType.SQUARE, SignalType.SAWTOOTH].map((t) => (
-              <Text 
-                key={t}
-                onPress={() => updateConfig({ type: t })}
-                className={`px-3 py-1 rounded-full text-xs font-bold ${config.type === t ? 'bg-teal-500 text-black' : 'bg-slate-800 text-white'}`}
-              >
-                {t.toUpperCase()}
-              </Text>
-            ))}
-          </View>
+    <View className="flex-1 bg-slate-950">
+      <StatusBar barStyle="light-content" />
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
+        
+        {/* Header Section */}
+        <View className="mb-8 pt-6">
+          <Text className="text-white text-3xl font-bold tracking-tight">Signal <Text style={{ color: Colors.neon.cyan }}>Gen</Text></Text>
+          <Text className="text-slate-500 text-xs font-mono mt-1 tracking-widest uppercase">Precision Waveform Lab</Text>
         </View>
 
-        <View className="mb-6">
-          <View className="flex-row justify-between mb-2">
-            <Text className="text-slate-400">Frequency</Text>
-            <Text className="text-teal-400 font-mono">{config.frequency.toFixed(0)} Hz</Text>
-          </View>
-          {/* Using a simple view-based slider proxy for now */}
-          <View className="h-2 bg-slate-800 rounded-full overflow-hidden">
-             <View style={{ width: `${(config.frequency / 2000) * 100}%` }} className="h-full bg-teal-500" />
-          </View>
-          <View className="flex-row justify-around mt-2">
-             <Text onPress={() => updateConfig({ frequency: Math.max(20, config.frequency - 10) })} className="text-white bg-slate-800 p-2 rounded">-10</Text>
-             <Text onPress={() => updateConfig({ frequency: Math.min(2000, config.frequency + 10) })} className="text-white bg-slate-800 p-2 rounded">+10</Text>
-          </View>
+        {/* Visualizer Section */}
+        <View className="mb-8">
+           <GlowSignalPlot 
+             data={signal} 
+             color={signalTypes.find(t => t.id === config.type)?.color || Colors.neon.cyan}
+             label="Real-time Oscilloscope"
+             height={240}
+           />
         </View>
 
-        <View className="mb-6">
-          <View className="flex-row justify-between mb-2">
-            <Text className="text-slate-400">Amplitude</Text>
-            <Text className="text-teal-400 font-mono">{config.amplitude.toFixed(2)}</Text>
+        {/* Configuration Console */}
+        <GlassCard>
+          <View className="mb-8">
+             <Text className="text-slate-400 text-[10px] uppercase font-mono tracking-widest mb-4">Oscillator Type</Text>
+             <View className="flex-row gap-3">
+               {signalTypes.map((type) => (
+                 <Pressable
+                   key={type.id}
+                   onPress={() => updateConfig({ type: type.id })}
+                   className={`flex-1 py-3 items-center rounded-xl border ${config.type === type.id ? 'border-white/20' : 'border-transparent'}`}
+                   style={{ 
+                     backgroundColor: config.type === type.id ? 'rgba(255, 255, 255, 0.05)' : 'transparent' 
+                   }}
+                 >
+                   <View 
+                      className="w-2 h-2 rounded-full mb-2" 
+                      style={{ 
+                        backgroundColor: type.color,
+                        shadowColor: type.color,
+                        shadowOpacity: config.type === type.id ? 1 : 0.3,
+                        shadowRadius: 5
+                      }} 
+                   />
+                   <Text className={`text-[10px] font-mono uppercase tracking-tighter ${config.type === type.id ? 'text-white font-bold' : 'text-slate-500'}`}>
+                     {type.label}
+                   </Text>
+                 </Pressable>
+               ))}
+             </View>
           </View>
-          <View className="h-2 bg-slate-800 rounded-full overflow-hidden">
-             <View style={{ width: `${config.amplitude * 100}%` }} className="h-full bg-teal-500" />
-          </View>
-          <View className="flex-row justify-around mt-2">
-             <Text onPress={() => updateConfig({ amplitude: Math.max(0, config.amplitude - 0.1) })} className="text-white bg-slate-800 p-2 rounded">-0.1</Text>
-             <Text onPress={() => updateConfig({ amplitude: Math.min(1.0, config.amplitude + 0.1) })} className="text-white bg-slate-800 p-2 rounded">+0.1</Text>
-          </View>
-        </View>
 
-        <View className="mb-2">
-          <View className="flex-row justify-between mb-2">
-            <Text className="text-slate-400">Sample Rate</Text>
-            <Text className="text-teal-400 font-mono">{config.sampleRate} Hz</Text>
+          <NeonSlider
+            label="Frequency"
+            value={config.frequency}
+            min={20}
+            max={2000}
+            step={1}
+            suffix="Hz"
+            onValueChange={(val) => updateConfig({ frequency: val })}
+            color={signalTypes.find(t => t.id === config.type)?.color}
+          />
+
+          <NeonSlider
+            label="Amplitude"
+            value={config.amplitude}
+            min={0}
+            max={1.0}
+            step={0.01}
+            suffix="V"
+            onValueChange={(val) => updateConfig({ amplitude: val })}
+            color={signalTypes.find(t => t.id === config.type)?.color}
+          />
+
+          {/* Sample Rate Selector */}
+          <View>
+            <Text className="text-slate-500 text-[10px] uppercase font-mono tracking-widest mb-4">Sampling Precision</Text>
+            <View className="flex-row gap-2">
+              {[8000, 16000, 44100].map(sr => (
+                <Pressable 
+                  key={sr}
+                  onPress={() => updateConfig({ sampleRate: sr })}
+                  className={`flex-1 items-center py-2 rounded-lg border ${config.sampleRate === sr ? 'bg-white/5 border-white/10' : 'border-transparent bg-black/20'}`}
+                >
+                  <Text className={`text-[10px] font-mono ${config.sampleRate === sr ? 'text-teal-400' : 'text-slate-600'}`}>
+                    {sr} HZ
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
-          <View className="flex-row gap-2">
-            {[8000, 16000, 44100].map(sr => (
-              <Text 
-                key={sr}
-                onPress={() => updateConfig({ sampleRate: sr })}
-                className={`flex-1 text-center py-2 rounded-lg text-xs font-mono ${config.sampleRate === sr ? 'bg-slate-700 text-teal-400' : 'bg-slate-800 text-slate-500'}`}
-              >
-                {sr}
-              </Text>
-            ))}
-          </View>
-        </View>
-      </View>
-    </ScrollView>
+        </GlassCard>
+      </ScrollView>
+    </View>
   );
 }
