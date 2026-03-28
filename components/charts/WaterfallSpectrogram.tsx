@@ -30,6 +30,8 @@ export default function WaterfallSpectrogram({
   const bins = 32; // Fixed resolution for performance
 
   useEffect(() => {
+    if (!Skia) return;
+    
     // Downsample current magnitudes to fixed bins
     const step = Math.max(1, Math.floor(magnitudes.length / bins));
     const currentBins: number[] = [];
@@ -41,7 +43,24 @@ export default function WaterfallSpectrogram({
         const next = [currentBins, ...prev];
         return next.slice(0, maxHistory);
     });
-  }, [magnitudes]);
+  }, [magnitudes, maxHistory]);
+
+  if (!Skia) {
+    return (
+      <View className="my-4">
+        {label && <Text className="text-slate-500 text-[10px] font-mono mb-2 uppercase tracking-widest pl-4">{label}</Text>}
+        <View 
+          style={{ width: CHART_WIDTH, height, alignSelf: 'center' }}
+          className="bg-slate-900 rounded-2xl items-center justify-center border border-slate-800"
+        >
+          <Text className="text-slate-500 text-[10px] font-mono text-center px-6">
+            Waterfall Spectrogram requires Skia.{"\n"}
+            (Not supported on this platform/web)
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   const rowHeight = height / maxHistory;
   const colWidth = CHART_WIDTH / bins;

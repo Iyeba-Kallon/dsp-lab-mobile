@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, Dimensions } from 'react-native';
+import { BarChart } from 'react-native-gifted-charts';
 import { 
   Canvas, 
   Path, 
@@ -45,7 +46,42 @@ export default function SpectrumPlot({
     return data;
   }, [magnitudes]);
 
+  const gridLines = useMemo(() => {
+    if (!Skia) return [];
+    try {
+      const lines = [];
+      for (let i = 0; i <= 4; i++) {
+          const y = padding + (usableHeight * i) / 4;
+          const path = Skia.Path.Make();
+          path.moveTo(padding, y);
+          path.lineTo(padding + usableWidth, y);
+          lines.push(path);
+      }
+      return lines;
+    } catch (e) {
+      return [];
+    }
+  }, [usableWidth, usableHeight, padding]);
+
   const barWidth = usableWidth / barData.length;
+
+  if (!Skia) {
+    const giftedBarData = barData.map(m => ({ value: m, frontColor: color }));
+    return (
+       <View className="bg-slate-900 p-4 rounded-xl mx-4">
+         <BarChart 
+            data={giftedBarData} 
+            width={CHART_WIDTH - 64} 
+            height={height - 80} 
+            barWidth={4} 
+            noOfSections={4}
+            hideRules
+            yAxisThickness={0}
+            xAxisThickness={0}
+         />
+       </View>
+    );
+  }
 
   return (
     <View className="my-4">
@@ -58,13 +94,9 @@ export default function SpectrumPlot({
         <Canvas style={{ flex: 1 }}>
           {/* Grid lines */}
           <Group color="rgba(245, 158, 11, 0.05)" strokeWidth={1} style="stroke">
-             {[0, 1, 2, 3, 4].map(i => {
-                const y = padding + (usableHeight * i) / 4;
-                const path = Skia.Path.Make();
-                path.moveTo(padding, y);
-                path.lineTo(padding + usableWidth, y);
-                return <Path key={`h-${i}`} path={path} />;
-             })}
+             {gridLines.map((p, i) => (
+                <Path key={`h-${i}`} path={p} />
+             ))}
           </Group>
 
           {/* Bars */}
