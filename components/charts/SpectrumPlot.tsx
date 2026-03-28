@@ -1,83 +1,108 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import { LineChart } from 'react-native-gifted-charts';
+import { View, Text, Dimensions } from 'react-native';
+import { 
+  Canvas, 
+  Path, 
+  Skia, 
+  LinearGradient, 
+  vec, 
+  Group,
+  Rect
+} from '@shopify/react-native-skia';
+import Colors from '@/constants/Colors';
 
 interface SpectrumPlotProps {
-  magnitude: Float32Array;
-  sampleRate: number;
+  magnitudes: Float32Array | number[];
+  frequencies: Float32Array | number[];
+  height?: number;
+  color?: string;
+  label?: string;
 }
 
-const screenWidth = Dimensions.get('window').width;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CHART_WIDTH = SCREEN_WIDTH - 32;
 
-export const SpectrumPlot: React.FC<SpectrumPlotProps> = ({ magnitude, sampleRate }) => {
-  // Downsample to 80 points max
-  const chartData = useMemo(() => {
-    const maxPoints = 80;
-    const step = Math.max(1, Math.floor(magnitude.length / maxPoints));
-    const rawData = Array.from(magnitude);
-    return rawData
-      .filter((_, i) => i % step === 0)
-      .slice(0, maxPoints)
-      .map((value) => ({ value }));
-  }, [magnitude]);
+export default function SpectrumPlot({
+  magnitudes,
+  frequencies,
+  height = 200,
+  color = Colors.neon.yellow,
+  label,
+}: SpectrumPlotProps) {
+  const padding = 20;
+  const usableHeight = height - padding * 2;
+  const usableWidth = CHART_WIDTH - padding * 2;
 
-  if (!chartData.length) {
-    return (
-      <View style={styles.empty}>
-        <Text style={styles.emptyText}>No spectrum data</Text>
-      </View>
-    );
-  }
+  // Downsample to 60 points for a nice bar look
+  const barData = useMemo(() => {
+    const maxBars = 60;
+    const step = Math.max(1, Math.floor(magnitudes.length / maxBars));
+    const data = [];
+    for (let i = 0; i < maxBars; i++) {
+        const mag = magnitudes[i * step] || 0;
+        data.push(mag);
+    }
+    return data;
+  }, [magnitudes]);
+
+  const barWidth = usableWidth / barData.length;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>Frequency Spectrum</Text>
-      <LineChart
-        data={chartData}
-        width={screenWidth - 48}
-        height={180}
-        color="#fbbf24"
-        thickness={2}
-        hideDataPoints
-        curved
-        noOfSections={4}
-        yAxisColor="#1e293b"
-        xAxisColor="#1e293b"
-        rulesColor="#1e293b"
-        yAxisTextStyle={styles.axisText}
-        backgroundColor="#0f172a"
-        initialSpacing={0}
-        endSpacing={0}
-      />
+    <View className="my-4">
+      {label && <Text className="text-slate-500 text-[10px] font-mono mb-2 uppercase tracking-widest pl-4">{label}</Text>}
+      
+      <View 
+        style={{ width: CHART_WIDTH, height, alignSelf: 'center' }}
+        className="bg-slate-950 rounded-2xl overflow-hidden border border-slate-800/50 shelf-shadow-lg"
+      >
+        <Canvas style={{ flex: 1 }}>
+          {/* Grid lines */}
+          <Group color="rgba(245, 158, 11, 0.05)" strokeWidth={1} style="stroke">
+             {[0, 1, 2, 3, 4].map(i => {
+                const y = padding + (usableHeight * i) / 4;
+                const path = Skia.Path.Make();
+                path.moveTo(padding, y);
+                path.lineTo(padding + usableWidth, y);
+                return <Path key={`h-${i}`} path={path} />;
+             })}
+          </Group>
+
+          {/* Bars */}
+          {barData.map((mag, i) => {
+            const barHeight = mag * usableHeight;
+            const x = padding + i * barWidth;
+            const y = padding + usableHeight - barHeight;
+            
+            return (
+              <Group key={`bar-${i}`}>
+                {/* Main Bar */}
+                <Rect
+                    x={x + 1}
+                    y={y}
+                    width={barWidth - 2}
+                    height={barHeight}
+                    color={color}
+                    opacity={0.8}
+                >
+                    <LinearGradient
+                        start={vec(x, y)}
+                        end={vec(x, y + barHeight)}
+                        colors={[color, 'transparent']}
+                    />
+                </Rect>
+                {/* Glow Tip */}
+                <Rect
+                    x={x + 1}
+                    y={y}
+                    width={barWidth - 2}
+                    height={2}
+                    color={color}
+                />
+              </Group>
+            );
+          })}
+        </Canvas>
+      </View>
     </View>
   );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    marginVertical: 8,
-    paddingHorizontal: 16,
-  },
-  label: {
-    fontSize: 12,
-    color: '#64748b',
-    marginBottom: 6,
-    fontFamily: 'monospace',
-  },
-  axisText: {
-    color: '#64748b',
-    fontSize: 10,
-  },
-  empty: {
-    height: 180,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    marginVertical: 8,
-  },
-  emptyText: {
-    color: '#334155',
-    fontSize: 13,
-  },
-});
+}
