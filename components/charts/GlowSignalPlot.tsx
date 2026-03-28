@@ -32,52 +32,61 @@ export default function GlowSignalPlot({
   const usableHeight = height - padding * 2;
   const usableWidth = CHART_WIDTH - padding * 2;
 
-  if (!Skia) {
-    return <SignalPlotFallback data={data} color={color} label={label} />;
-  }
-
   // Convert signal data to a Skia Path
   const path = useMemo(() => {
-    if (!data || data.length === 0) return Skia.Path.Make();
+    // Safety check inside hook to satisfy Rules of Hooks
+    if (!Skia || !data || data.length === 0) return null;
 
-    const skPath = Skia.Path.Make();
-    const stepX = usableWidth / (data.length - 1);
-    
-    // Scale Y: data is usually -1.0 to 1.0
-    // Middle is usableHeight / 2
-    const centerY = padding + usableHeight / 2;
-    const scaleY = usableHeight / 2;
+    try {
+      const skPath = Skia.Path.Make();
+      const stepX = usableWidth / (data.length - 1);
+      
+      const centerY = padding + usableHeight / 2;
+      const scaleY = usableHeight / 2;
 
-    skPath.moveTo(padding, centerY - data[0] * scaleY);
+      skPath.moveTo(padding, centerY - data[0] * scaleY);
 
-    for (let i = 1; i < data.length; i++) {
-        skPath.lineTo(padding + i * stepX, centerY - data[i] * scaleY);
+      for (let i = 1; i < data.length; i++) {
+          skPath.lineTo(padding + i * stepX, centerY - data[i] * scaleY);
+      }
+
+      return skPath;
+    } catch (e) {
+      console.warn("Skia Path creation failed:", e);
+      return null;
     }
-
-    return skPath;
   }, [data, usableWidth, usableHeight, padding]);
 
   // Create grid lines
   const gridLines = useMemo(() => {
-    const lines = [];
-    // Horizontal lines
-    for (let i = 0; i <= 4; i++) {
-        const y = padding + (usableHeight * i) / 4;
-        const line = Skia.Path.Make();
-        line.moveTo(padding, y);
-        line.lineTo(padding + usableWidth, y);
-        lines.push(line);
+    if (!Skia) return [];
+    
+    try {
+      const lines = [];
+      for (let i = 0; i <= 4; i++) {
+          const y = padding + (usableHeight * i) / 4;
+          const line = Skia.Path.Make();
+          line.moveTo(padding, y);
+          line.lineTo(padding + usableWidth, y);
+          lines.push(line);
+      }
+      for (let i = 0; i <= 8; i++) {
+          const x = padding + (usableWidth * i) / 8;
+          const line = Skia.Path.Make();
+          line.moveTo(x, padding);
+          line.lineTo(x, padding + usableHeight);
+          lines.push(line);
+      }
+      return lines;
+    } catch (e) {
+      return [];
     }
-    // Vertical lines
-    for (let i = 0; i <= 8; i++) {
-        const x = padding + (usableWidth * i) / 8;
-        const line = Skia.Path.Make();
-        line.moveTo(x, padding);
-        line.lineTo(x, padding + usableHeight);
-        lines.push(line);
-    }
-    return lines;
   }, [usableWidth, usableHeight, padding]);
+
+  // Final platform check for rendering
+  if (!Skia || !path) {
+    return <SignalPlotFallback data={data} color={color} label={label} />;
+  }
 
   return (
     <View className="my-4">

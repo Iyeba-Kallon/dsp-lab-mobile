@@ -29,6 +29,22 @@ export default function WaterfallSpectrogram({
   const [history, setHistory] = useState<number[][]>([]);
   const bins = 32; // Fixed resolution for performance
 
+  useEffect(() => {
+    if (!Skia) return;
+    
+    // Downsample current magnitudes to fixed bins
+    const step = Math.max(1, Math.floor(magnitudes.length / bins));
+    const currentBins: number[] = [];
+    for (let i = 0; i < bins; i++) {
+        currentBins.push(magnitudes[i * step] || 0);
+    }
+
+    setHistory(prev => {
+        const next = [currentBins, ...prev];
+        return next.slice(0, maxHistory);
+    });
+  }, [magnitudes, maxHistory]);
+
   if (!Skia) {
     return (
       <View className="my-4">
@@ -45,20 +61,6 @@ export default function WaterfallSpectrogram({
       </View>
     );
   }
-
-  useEffect(() => {
-    // Downsample current magnitudes to fixed bins
-    const step = Math.max(1, Math.floor(magnitudes.length / bins));
-    const currentBins: number[] = [];
-    for (let i = 0; i < bins; i++) {
-        currentBins.push(magnitudes[i * step] || 0);
-    }
-
-    setHistory(prev => {
-        const next = [currentBins, ...prev];
-        return next.slice(0, maxHistory);
-    });
-  }, [magnitudes]);
 
   const rowHeight = height / maxHistory;
   const colWidth = CHART_WIDTH / bins;
