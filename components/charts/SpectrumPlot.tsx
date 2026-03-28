@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, Dimensions } from 'react-native';
+import { BarChart } from 'react-native-gifted-charts';
 import { 
   Canvas, 
   Path, 
@@ -32,6 +33,24 @@ export default function SpectrumPlot({
   const padding = 20;
   const usableHeight = height - padding * 2;
   const usableWidth = CHART_WIDTH - padding * 2;
+
+  if (!Skia) {
+    const barData = Array.from(magnitudes).slice(0, 60).map(m => ({ value: m, frontColor: color }));
+    return (
+       <View className="bg-slate-900 p-4 rounded-xl mx-4">
+         <BarChart 
+            data={barData} 
+            width={CHART_WIDTH - 64} 
+            height={height - 80} 
+            barWidth={4} 
+            noOfSections={4}
+            hideRules
+            yAxisThickness={0}
+            xAxisThickness={0}
+         />
+       </View>
+    );
+  }
 
   // Downsample to 60 points for a nice bar look
   const barData = useMemo(() => {

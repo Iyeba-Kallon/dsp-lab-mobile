@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, Dimensions } from 'react-native';
+import SignalPlotFallback from './SignalPlot';
 import { 
   Canvas, 
   Path, 
@@ -30,6 +31,10 @@ export default function GlowSignalPlot({
   const padding = 20;
   const usableHeight = height - padding * 2;
   const usableWidth = CHART_WIDTH - padding * 2;
+
+  if (!Skia) {
+    return <SignalPlotFallback data={data} color={color} label={label} />;
+  }
 
   // Convert signal data to a Skia Path
   const path = useMemo(() => {
