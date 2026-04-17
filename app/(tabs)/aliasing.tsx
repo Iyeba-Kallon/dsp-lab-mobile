@@ -1,83 +1,118 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, StatusBar } from 'react-native';
 import { generateSignal, SignalType } from '@/utils/dsp';
-import SignalPlot from '@/components/charts/SignalPlot';
+import GlowSignalPlot from '@/components/charts/GlowSignalPlot';
+import NeonSlider from '@/components/inputs/NeonSlider';
+import GlassCard from '@/components/ui/GlassCard';
+import Colors from '@/constants/Colors';
 
 export default function AliasingScreen() {
   const [freq, setFreq] = useState(1000);
-  const sampleRate = 4000; // Low sample rate to demonstrate aliasing easily
+  const sampleRate = 4000; // Demostration sample rate
   const nyquist = sampleRate / 2;
 
-  // Generate the "true" signal at a high sample rate for reference
+  // Reference "analog" signal (high sample rate)
   const trueSignal = useMemo(() => {
     return generateSignal(SignalType.SINE, freq, 0.8, 44100, 1024);
   }, [freq]);
 
-  // Generate the "sampled" signal at the low sample rate
+  // Sampled "digital" signal (low sample rate)
   const sampledSignal = useMemo(() => {
     return generateSignal(SignalType.SINE, freq, 0.8, sampleRate, 128);
   }, [freq]);
 
-  // The aliased frequency formula: |f - N * fs|
   const aliasedFreq = useMemo(() => {
     const f = freq;
     const fs = sampleRate;
     if (f <= nyquist) return f;
-    
-    // Simplistic aliasing model for display
     const fold = Math.round(f / fs);
     return Math.abs(f - fold * fs);
   }, [freq, sampleRate]);
 
+  const isAliased = freq > nyquist;
+
   return (
-    <ScrollView className="flex-1 bg-slate-950 p-4">
-      <View className="mb-4">
-        <Text className="text-white text-2xl font-bold mb-2">Aliasing Demo</Text>
-        <Text className="text-slate-400 mb-4">
-          See what happens when frequency exceeds Nyquist ({nyquist} Hz).
-        </Text>
-      </View>
-
-      <Text className="text-teal-400 font-mono mb-2 uppercase text-xs font-bold">Actual Waveform</Text>
-      <SignalPlot data={trueSignal} color="#2dd4bf" />
-
-      <Text className="text-coral font-mono mb-2 mt-4 uppercase text-xs font-bold">
-        Sampled @ {sampleRate}Hz {freq > nyquist ? '(ALIASED!)' : ''}
-      </Text>
-      <SignalPlot data={sampledSignal} color="#fb7185" />
-
-      <View className="bg-slate-900 p-4 rounded-xl mt-4">
-        <View className="mb-6">
-          <View className="flex-row justify-between mb-2">
-            <Text className="text-slate-400">Input Frequency</Text>
-            <Text className={`font-mono ${freq > nyquist ? 'text-coral' : 'text-teal-400'}`}>
-              {freq} Hz
-            </Text>
-          </View>
-          <View className="flex-row gap-2 flex-wrap">
-            {[500, 1500, 2500, 3500, 4500, 5500].map(f => (
-              <Text 
-                key={f}
-                onPress={() => setFreq(f)}
-                className={`px-4 py-2 rounded-lg text-xs font-mono ${freq === f ? 'bg-slate-700 text-white' : 'bg-slate-800 text-slate-500'}`}
-              >
-                {f} Hz
-              </Text>
-            ))}
-          </View>
+    <View className="flex-1 bg-slate-950">
+      <StatusBar barStyle="light-content" />
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
+        
+        {/* Header */}
+        <View className="mb-8 pt-6">
+          <Text className="text-white text-3xl font-bold tracking-tight">Spectral <Text style={{ color: Colors.neon.magenta }}>Aliasing</Text></Text>
+          <Text className="text-slate-500 text-xs font-mono mt-1 tracking-widest uppercase">The Nyquist Limit Demo</Text>
         </View>
 
-        {freq > nyquist && (
-          <View className="p-3 bg-rose-900/40 rounded-lg border border-rose-800">
-            <Text className="text-rose-200 text-sm font-bold mb-1">Observation:</Text>
-            <Text className="text-rose-300 text-xs">
-              The input frequency ({freq} Hz) is above the Nyquist limit ({nyquist} Hz). 
-              The sampler can't keep up, causing the signal to "fold back" and appear as a lower frequency 
-              of approx. {aliasedFreq.toFixed(0)} Hz.
-            </Text>
+        {/* Visualizer Section */}
+        <View className="mb-8">
+            <GlowSignalPlot 
+                data={trueSignal} 
+                color={Colors.neon.cyan} 
+                label="Ideal Waveform (Pre-Sampling)" 
+                height={160}
+            />
+            <View className="h-6" />
+            <GlowSignalPlot 
+                data={sampledSignal} 
+                color={isAliased ? Colors.neon.magenta : Colors.neon.green} 
+                label={`Reconstructed @ ${sampleRate}Hz ${isAliased ? '(ALIASED)' : '(SAFE)'}`} 
+                height={200}
+            />
+        </View>
+
+        {/* Simulation Dashboard */}
+        <GlassCard className="mb-8">
+          <View className="flex-row justify-between items-center mb-6">
+             <View>
+               <Text className="text-slate-500 text-[10px] uppercase font-mono tracking-widest mb-1">Target Frequency</Text>
+               <Text className={`text-xl font-bold font-mono ${isAliased ? 'text-rose-400' : 'text-teal-400'}`}>
+                 {freq.toLocaleString()} Hz
+               </Text>
+             </View>
+             <View className="items-end">
+               <Text className="text-slate-500 text-[10px] uppercase font-mono tracking-widest mb-1">Nyquist Zone</Text>
+               <Text className="text-white text-xs font-mono">{nyquist} Hz</Text>
+             </View>
           </View>
+
+          <NeonSlider
+            label="Adjust Oscillator"
+            value={freq}
+            min={100}
+            max={8000}
+            step={50}
+            suffix="Hz"
+            onValueChange={setFreq}
+            color={isAliased ? Colors.neon.magenta : Colors.neon.cyan}
+          />
+        </GlassCard>
+
+        {/* Diagnostic Box */}
+        {isAliased ? (
+          <GlassCard borderAlpha={0.2} className="bg-rose-500/5 mb-8">
+             <View className="flex-row gap-3 items-center mb-3">
+                <View className="w-2 h-2 rounded-full bg-rose-500" />
+                <Text className="text-rose-400 font-bold uppercase text-[10px] tracking-widest">Folding Violation</Text>
+             </View>
+             <Text className="text-rose-200/80 text-xs font-mono leading-relaxed">
+               The frequency exceeds the Nyquist limit. The sampler cannot distinguish cycles, causing 
+               the energy to fold back to <Text className="text-white font-bold">{aliasedFreq.toFixed(0)} Hz</Text>. 
+               This is a permanent loss of information.
+             </Text>
+          </GlassCard>
+        ) : (
+          <GlassCard borderAlpha={0.2} className="bg-emerald-500/5 mb-8">
+             <View className="flex-row gap-3 items-center mb-3">
+                <View className="w-2 h-2 rounded-full bg-emerald-500" />
+                <Text className="text-emerald-400 font-bold uppercase text-[10px] tracking-widest">Sampling Valid</Text>
+             </View>
+             <Text className="text-emerald-200/80 text-xs font-mono leading-relaxed">
+               The current frequency is within the safe zone (< Nyquist). The Whittaker–Shannon 
+               interpolation formula can perfectly reconstruct this signal from its discrete samples.
+             </Text>
+          </GlassCard>
         )}
-      </View>
-    </ScrollView>
+
+      </ScrollView>
+    </View>
   );
 }
