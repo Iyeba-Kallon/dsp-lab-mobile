@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, Switch } from 'react-native';
+import { View, Text, ScrollView, Pressable, Switch, StatusBar } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence } from 'react-native-reanimated';
 import { SignalType } from '@/utils/dsp';
 import { useMixer, SlotConfig } from '@/hooks/useMixer';
-import SignalPlot from '@/components/charts/SignalPlot';
+import GlowSignalPlot from '@/components/charts/GlowSignalPlot';
+import NeonSlider from '@/components/inputs/NeonSlider';
+import GlassCard from '@/components/ui/GlassCard';
+import Colors from '@/constants/Colors';
 
 export default function MixerScreen() {
   const sampleRate = 8000;
@@ -15,7 +18,7 @@ export default function MixerScreen() {
     { type: SignalType.SAWTOOTH, frequency: 220, gain: 0.2, enabled: false },
   ]);
 
-  const { individualSignals, mixedSignal, clipping, clipRatio } = useMixer({
+  const { mixedSignal, clipping, clipRatio } = useMixer({
     slots,
     sampleRate,
     numSamples,
@@ -32,7 +35,7 @@ export default function MixerScreen() {
   useEffect(() => {
     if (clipping) {
       pulse.value = withRepeat(
-        withSequence(withTiming(1.2, { duration: 400 }), withTiming(1, { duration: 400 })),
+        withSequence(withTiming(1.05, { duration: 400 }), withTiming(1, { duration: 400 })),
         -1,
         true
       );
@@ -42,101 +45,124 @@ export default function MixerScreen() {
   }, [clipping]);
 
   const pulseStyle = useAnimatedStyle(() => ({
+    opacity: clipping ? withTiming(1) : withTiming(0),
     transform: [{ scale: pulse.value }],
   }));
 
-  const renderSlot = (slot: SlotConfig, index: number) => (
-    <View 
-      key={index}
-      className={`bg-slate-900 border border-slate-800 p-4 rounded-xl mb-4 ${!slot.enabled ? 'opacity-40' : 'opacity-100'}`}
-    >
-      <View className="flex-row justify-between items-center mb-4">
-        <Text className="text-white font-bold">Signal {index + 1}</Text>
-        <Switch 
-          value={slot.enabled} 
-          onValueChange={(val) => updateSlot(index, { enabled: val })}
-          trackColor={{ false: '#334155', true: '#14b8a6' }}
+  const signalMetadata = {
+    [SignalType.SINE]: { label: 'Sine', color: Colors.neon.cyan },
+    [SignalType.SQUARE]: { label: 'Square', color: Colors.neon.violet },
+    [SignalType.SAWTOOTH]: { label: 'Saw', color: Colors.neon.magenta },
+  };
+
+  const renderSlot = (slot: SlotConfig, index: number) => {
+    const meta = signalMetadata[slot.type];
+    
+    return (
+      <GlassCard key={index} className={`mb-6 ${!slot.enabled ? 'opacity-50' : ''}`}>
+        <View className="flex-row justify-between items-center mb-6">
+          <View>
+            <Text className="text-white font-bold tracking-tight">Signal Slot {index + 1}</Text>
+            <Text className="text-slate-500 text-[10px] font-mono uppercase tracking-widest mt-1">Oscillator Channel</Text>
+          </View>
+          <Switch 
+            value={slot.enabled} 
+            onValueChange={(val) => updateSlot(index, { enabled: val })}
+            trackColor={{ false: '#1e293b', true: meta.color }}
+            thumbColor={slot.enabled ? '#fff' : '#64748b'}
+          />
+        </View>
+
+        <View className="flex-row gap-2 mb-8">
+          {Object.entries(signalMetadata).map(([type, data]) => (
+            <Pressable
+              key={type}
+              onPress={() => updateSlot(index, { type: type as SignalType })}
+              className={`flex-1 py-3 rounded-xl border items-center ${slot.type === type ? 'border-white/10 bg-white/5' : 'border-transparent bg-black/20'}`}
+            >
+              <View 
+                className="w-1.5 h-1.5 rounded-full mb-2" 
+                style={{ backgroundColor: data.color, opacity: slot.type === type ? 1 : 0.3 }} 
+              />
+              <Text className={`text-[9px] font-mono uppercase tracking-tighter ${slot.type === type ? 'text-white' : 'text-slate-500'}`}>
+                {data.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <NeonSlider
+          label="Frequency"
+          value={slot.frequency}
+          min={20}
+          max={2000}
+          step={1}
+          suffix="Hz"
+          onValueChange={(val) => updateSlot(index, { frequency: val })}
+          color={meta.color}
         />
-      </View>
 
-      <View className="flex-row gap-2 mb-4">
-        {(['sine', 'square', 'sawtooth'] as SignalType[]).map((t) => (
-          <Pressable
-            key={t}
-            onPress={() => updateSlot(index, { type: t })}
-            className={`flex-1 py-1 rounded-md items-center ${slot.type === t ? 'bg-teal-500' : 'bg-slate-800'}`}
-          >
-            <Text className={`text-[10px] font-bold ${slot.type === t ? 'text-black' : 'text-slate-400'}`}>
-              {t.toUpperCase()}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <View className="flex-row justify-between mb-2">
-        <Text className="text-slate-500 text-[10px]">Freq: {slot.frequency}Hz</Text>
-        <Text className="text-slate-500 text-[10px]">Gain: {slot.gain.toFixed(2)}</Text>
-      </View>
-
-      <View className="flex-row gap-4 items-center">
-        <View className="flex-1 h-1 bg-slate-800 rounded-full overflow-hidden">
-           <View style={{ width: `${(slot.frequency / 2000) * 100}%` }} className="h-full bg-teal-500" />
-        </View>
-        <View className="flex-row gap-1">
-          <Pressable onPress={() => updateSlot(index, { frequency: Math.max(20, slot.frequency - 50) })} className="bg-slate-800 px-2 py-1 rounded">
-            <Text className="text-white text-[10px]">-</Text>
-          </Pressable>
-          <Pressable onPress={() => updateSlot(index, { frequency: Math.min(2000, slot.frequency + 50) })} className="bg-slate-800 px-2 py-1 rounded">
-            <Text className="text-white text-[10px]">+</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <View className="flex-row gap-4 items-center mt-3">
-        <View className="flex-1 h-1 bg-slate-800 rounded-full overflow-hidden">
-           <View style={{ width: `${slot.gain * 100}%` }} className="h-full bg-teal-500" />
-        </View>
-        <View className="flex-row gap-1">
-          <Pressable onPress={() => updateSlot(index, { gain: Math.max(0, slot.gain - 0.1) })} className="bg-slate-800 px-2 py-1 rounded">
-            <Text className="text-white text-[10px]">-</Text>
-          </Pressable>
-          <Pressable onPress={() => updateSlot(index, { gain: Math.min(1.0, slot.gain + 0.1) })} className="bg-slate-800 px-2 py-1 rounded">
-            <Text className="text-white text-[10px]">+</Text>
-          </Pressable>
-        </View>
-      </View>
-    </View>
-  );
+        <NeonSlider
+          label="Gain"
+          value={slot.gain}
+          min={0}
+          max={1.0}
+          step={0.01}
+          suffix="V"
+          onValueChange={(val) => updateSlot(index, { gain: val })}
+          color={meta.color}
+        />
+      </GlassCard>
+    );
+  };
 
   return (
-    <ScrollView className="flex-1 bg-slate-950">
-      <View className="p-4">
-        <View className="mb-6">
-          <Text className="text-white text-2xl font-bold mb-2">Signal Mixer</Text>
-          <Text className="text-slate-400">Combine multiple waves and check for clipping.</Text>
+    <View className="flex-1 bg-slate-950">
+      <StatusBar barStyle="light-content" />
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
+        
+        {/* Header Section */}
+        <View className="mb-8 pt-6">
+          <Text className="text-white text-3xl font-bold tracking-tight">Signal <Text style={{ color: Colors.neon.violet }}>Mixer</Text></Text>
+          <Text className="text-slate-500 text-xs font-mono mt-1 tracking-widest uppercase">Multi-track Summation Lab</Text>
         </View>
 
+        {/* Individual Slots */}
         {slots.map(renderSlot)}
 
-        <View className="bg-slate-900/50 p-4 rounded-2xl border border-slate-800 mt-4 mb-8">
-          <Text className="text-slate-500 text-[11px] uppercase tracking-widest mb-4">Mixed Output</Text>
+        {/* Master Output Section */}
+        <View className="mt-4 mb-8">
+          <Text className="text-slate-500 text-[10px] uppercase font-mono tracking-widest mb-4 ml-2">Composite Output</Text>
           
-          <SignalPlot data={mixedSignal} color="#f43f5e" label="Summed Waveform" />
+          <GlowSignalPlot 
+            data={mixedSignal} 
+            color={clipping ? Colors.neon.magenta : Colors.neon.cyan} 
+            label="Mixed Resultant Waveform"
+            height={220}
+          />
+
+          <View className="mt-6 flex-row justify-between items-center px-2">
+             <View>
+               <Text className="text-slate-500 text-[10px] font-mono uppercase tracking-tight">Clip Headroom</Text>
+               <Text className={`font-mono text-lg font-bold ${clipping ? 'text-rose-400' : 'text-emerald-400'}`}>
+                 {(clipRatio * 100).toFixed(1)}% {clipping ? 'OVER' : 'OK'}
+               </Text>
+             </View>
+             
+             <Animated.View style={pulseStyle} className="bg-rose-500/10 border border-rose-500/30 px-4 py-2 rounded-full">
+                <Text className="text-rose-500 text-[10px] font-bold font-mono tracking-tighter uppercase">Gain Warning</Text>
+             </Animated.View>
+          </View>
 
           {clipping && (
-            <Animated.View style={pulseStyle} className="bg-rose-500 p-3 rounded-lg mt-4 items-center">
-              <Text className="text-white font-bold text-xs">CLIPPING DETECTED — REDUCE GAIN</Text>
-            </Animated.View>
+            <GlassCard className="mt-6 border-rose-500/20 bg-rose-500/5">
+              <Text className="text-rose-200 text-xs font-mono leading-relaxed">
+                <Text className="font-bold uppercase">Signal Distortion Detected:</Text> Summed amplitude exceeds 1.0 peak-to-peak. Reduce individual channel gains to normalize the output.
+              </Text>
+            </GlassCard>
           )}
-
-          <View className="mt-4 flex-row justify-between items-center">
-             <Text className="text-slate-400 text-xs">Clip Ratio:</Text>
-             <Text className={`font-mono font-bold ${clipping ? 'text-rose-400' : 'text-emerald-400'}`}>
-               {(clipRatio * 100).toFixed(1)}%
-             </Text>
-          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
